@@ -15,6 +15,8 @@ const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 // const ExpressError = require("./utils/ExpressError");
 
+const alumniRoutes = require("./routes/alumniRoutes");
+
 const app = express();
 
 // View Engine
@@ -87,6 +89,8 @@ app.get("/", (req, res) => {
   res.send("Alumni Connect Backend 🚀");
 });
 
+app.use("/api/alumni", alumniRoutes);
+
 // Error handling
 // app.all("*", (req, res, next) => {
 //   next(new ExpressError("Page Not Found", 404));
@@ -98,7 +102,7 @@ app.use((err, req, res, next) => {
   res.status(statusCode).send(err.message);
 });
 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Listening on http://localhost:${port}`);
 });
