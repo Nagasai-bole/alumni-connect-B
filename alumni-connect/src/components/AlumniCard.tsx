@@ -1,16 +1,17 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Alumni } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MapPin, Briefcase, Calendar, Star } from 'lucide-react';
+import React from "react";
+import { Link } from "react-router-dom";
+import { Alumni } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MapPin, Briefcase, Calendar, Star } from "lucide-react";
 
 interface AlumniCardProps {
   alumni: Alumni;
 }
 
 const AlumniCard: React.FC<AlumniCardProps> = ({ alumni }) => {
+  console.log("Alumni ID:", alumni.id); // <-- Add this line
   return (
     <Card className="group hover:shadow-xl transition-all duration-base transform hover:-translate-y-1 overflow-hidden">
       <div className="h-2 bg-gradient-primary" />

@@ -1,28 +1,54 @@
-import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import DashboardStats from '@/components/DashboardStats';
-import AlumniCard from '@/components/AlumniCard';
-import EventCard from '@/components/EventCard';
-import { mockAlumni, mockEvents } from '@/data/mockData';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Sparkles, UserPlus, Calendar } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import DashboardStats from "@/components/DashboardStats";
+import AlumniCard from "@/components/AlumniCard";
+import { mockAlumni, mockEvents } from "@/data/mockData";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, Sparkles, UserPlus, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+
+interface RequestsData {
+  referralRequests: { message: string }[];
+  mentorshipRequests: { message: string }[];
+}
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const handleEventRegister = () => {
-    toast({
-      title: "Registration Successful!",
-      description: "You've been registered for the event.",
-    });
-  };
+  const [requests, setRequests] = useState<RequestsData>({
+    referralRequests: [],
+    mentorshipRequests: [],
+  });
 
   const featuredAlumni = mockAlumni.slice(0, 3);
   const upcomingEvents = mockEvents.slice(0, 2);
+
+  // Fetch alumni requests if user is alumni
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (user?.role !== "alumni") return;
+
+      try {
+        const res = await fetch(
+          "http://localhost:5000/api/alumni/me/requests",
+          { credentials: "include" }
+        );
+        if (!res.ok) throw new Error("Failed to fetch requests");
+        const data = await res.json();
+        setRequests({
+          referralRequests: data.referralRequests || [],
+          mentorshipRequests: data.mentorshipRequests || [],
+        });
+      } catch (err: any) {
+        toast({ title: "Error", description: err.message });
+      }
+    };
+
+    fetchRequests();
+  }, [user, toast]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -37,12 +63,15 @@ const Dashboard: React.FC = () => {
                   <Sparkles className="h-6 w-6 text-accent" />
                 </h1>
                 <p className="text-primary-foreground/80">
-                  {user?.role === 'student' && "Connect with alumni and explore opportunities"}
-                  {user?.role === 'alumni' && "Stay connected with your alma mater"}
-                  {user?.role === 'admin' && "Manage the alumni network effectively"}
+                  {user?.role === "student" &&
+                    "Connect with alumni and explore opportunities"}
+                  {user?.role === "alumni" &&
+                    "Stay connected with your alma mater"}
+                  {user?.role === "admin" &&
+                    "Manage the alumni network effectively"}
                 </p>
               </div>
-              {user?.role === 'student' && (
+              {user?.role === "student" && (
                 <Link to="/alumni">
                   <Button className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2">
                     <UserPlus className="h-4 w-4" />
@@ -50,7 +79,7 @@ const Dashboard: React.FC = () => {
                   </Button>
                 </Link>
               )}
-              {user?.role === 'admin' && (
+              {user?.role === "admin" && (
                 <Link to="/events">
                   <Button className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2">
                     <Calendar className="h-4 w-4" />
@@ -94,7 +123,7 @@ const Dashboard: React.FC = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            {user?.role === 'student' && (
+            {user?.role === "student" && (
               <Card className="shadow-lg">
                 <CardHeader>
                   <CardTitle className="text-lg">Quick Actions</CardTitle>
@@ -128,13 +157,21 @@ const Dashboard: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {upcomingEvents.map((event) => (
-                  <div key={event.id} className="border-l-4 border-primary pl-4">
+                  <div
+                    key={event.id}
+                    className="border-l-4 border-primary pl-4"
+                  >
                     <h4 className="font-medium text-sm">{event.title}</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(event.date).toLocaleDateString()} at {event.time}
+                      {new Date(event.date).toLocaleDateString()} at{" "}
+                      {event.time}
                     </p>
                     <Link to="/events">
-                      <Button variant="link" size="sm" className="px-0 h-auto mt-2">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="px-0 h-auto mt-2"
+                      >
                         Learn More →
                       </Button>
                     </Link>
@@ -144,28 +181,99 @@ const Dashboard: React.FC = () => {
             </Card>
 
             {/* Role-specific Stats */}
-            {user?.role === 'alumni' && (
-              <Card className="shadow-lg bg-gradient-card">
-                <CardHeader>
-                  <CardTitle className="text-lg">Your Impact</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Mentorship Requests</span>
-                      <span className="font-semibold">5 pending</span>
+            {user?.role === "alumni" && (
+              <>
+                {/* Your Impact */}
+                <Card className="shadow-lg bg-gradient-card">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Your Impact</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Mentorship Requests
+                        </span>
+                        <span className="font-semibold">
+                          {requests.mentorshipRequests.length} pending
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Referral Requests
+                        </span>
+                        <span className="font-semibold">
+                          {requests.referralRequests.length} new
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">
+                          Profile Views
+                        </span>
+                        <span className="font-semibold">127 this month</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Referral Requests</span>
-                      <span className="font-semibold">3 new</span>
+                  </CardContent>
+                </Card>
+
+                {/* Messages Section */}
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Messages</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Referral Requests */}
+                    <div>
+                      <h3 className="text-md font-semibold mb-2">
+                        Referral Requests
+                      </h3>
+                      {requests.referralRequests.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No referral requests
+                        </p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {requests.referralRequests.map((req, idx) => (
+                            <li
+                              key={idx}
+                              className="p-3 border rounded-md flex flex-col gap-1"
+                            >
+                              <span className="text-sm text-muted-foreground">
+                                {req.message}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Profile Views</span>
-                      <span className="font-semibold">127 this month</span>
+
+                    {/* Mentorship Requests */}
+                    <div>
+                      <h3 className="text-md font-semibold mb-2">
+                        Mentorship Requests
+                      </h3>
+                      {requests.mentorshipRequests.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No mentorship requests
+                        </p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {requests.mentorshipRequests.map((req, idx) => (
+                            <li
+                              key={idx}
+                              className="p-3 border rounded-md flex flex-col gap-1"
+                            >
+                              <span className="text-sm text-muted-foreground">
+                                {req.message}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         </div>

@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { mockAlumni } from '@/data/mockData';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MapPin,
   Briefcase,
@@ -27,47 +26,149 @@ import {
   ArrowLeft,
   Send,
   UserPlus,
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+
+// Define the Alumni type
+interface Alumni {
+  id: string;
+  name: string;
+  role: string;
+  currentCompany: string;
+  profilePic: string;
+  batch: string;
+  department: string;
+  location: string;
+  email: string;
+  linkedIn?: string;
+  skills: string[];
+  experience?: {
+    role: string;
+    company: string;
+    duration: string;
+    description: string;
+  }[];
+  projects?: {
+    title: string;
+    description: string;
+    technologies: string[];
+    link?: string;
+  }[];
+  achievements?: { title: string; description: string; year: string }[];
+  isAvailableForMentorship: boolean;
+  isAvailableForReferral: boolean;
+}
 
 const AlumniProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [referralMessage, setReferralMessage] = useState('');
-  const [mentorshipMessage, setMentorshipMessage] = useState('');
 
-  const alumni = mockAlumni.find(a => a.id === id);
+  const [alumni, setAlumni] = useState<Alumni | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!alumni) {
+  const [referralMessage, setReferralMessage] = useState("");
+  const [mentorshipMessage, setMentorshipMessage] = useState("");
+
+  // Fetch alumni data
+  useEffect(() => {
+    const fetchAlumni = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/api/alumni/${id}`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          setError(
+            res.status === 404 ? "Alumni not found" : "Something went wrong"
+          );
+          return;
+        }
+        const data = await res.json();
+        setAlumni({ ...data, id: data._id }); // map _id to id
+      } catch (err) {
+        setError("Failed to load alumni data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAlumni();
+  }, [id]);
+
+  // Handle referral request
+  const handleReferralRequest = async () => {
+    if (!referralMessage) return toast({ title: "Message cannot be empty" });
+
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/alumni/${id}/referral`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ message: referralMessage }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to send referral request");
+
+      toast({
+        title: "Referral Request Sent!",
+        description: `Your request has been sent to ${alumni?.name}.`,
+      });
+      setReferralMessage("");
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message });
+    }
+  };
+
+  // Handle mentorship request
+  const handleMentorshipRequest = async () => {
+    if (!mentorshipMessage) return toast({ title: "Message cannot be empty" });
+
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/alumni/${id}/mentorship`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ message: mentorshipMessage }),
+        }
+      );
+      if (!res.ok) throw new Error("Failed to send mentorship request");
+
+      toast({
+        title: "Mentorship Request Sent!",
+        description: `Your request has been sent to ${alumni?.name}.`,
+      });
+      setMentorshipMessage("");
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message });
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        Loading...
+      </div>
+    );
+
+  if (error || !alumni)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Alumni not found</h2>
+          <h2 className="text-2xl font-bold mb-2">
+            {error || "Alumni not found"}
+          </h2>
           <Link to="/alumni">
             <Button>Back to Directory</Button>
           </Link>
         </div>
       </div>
     );
-  }
-
-  const handleReferralRequest = () => {
-    toast({
-      title: "Referral Request Sent!",
-      description: `Your request has been sent to ${alumni.name}.`,
-    });
-    setReferralMessage('');
-  };
-
-  const handleMentorshipRequest = () => {
-    toast({
-      title: "Mentorship Request Sent!",
-      description: `Your request has been sent to ${alumni.name}.`,
-    });
-    setMentorshipMessage('');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
@@ -124,8 +225,9 @@ const AlumniProfile: React.FC = () => {
                   <Badge variant="secondary">{alumni.department}</Badge>
                 </div>
 
-                {user?.role === 'student' && (
+                {user?.role === "student" && (
                   <div className="flex flex-wrap gap-2">
+                    {/* Referral */}
                     {alumni.isAvailableForReferral && (
                       <Dialog>
                         <DialogTrigger asChild>
@@ -136,25 +238,35 @@ const AlumniProfile: React.FC = () => {
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Request Referral from {alumni.name}</DialogTitle>
+                            <DialogTitle>
+                              Request Referral from {alumni.name}
+                            </DialogTitle>
                             <DialogDescription>
-                              Send a referral request for opportunities at {alumni.currentCompany}
+                              Send a referral request for opportunities at{" "}
+                              {alumni.currentCompany}
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <Textarea
-                              placeholder="Write a brief message explaining why you're interested in a referral..."
+                              placeholder="Write a brief message..."
                               value={referralMessage}
-                              onChange={(e) => setReferralMessage(e.target.value)}
+                              onChange={(e) =>
+                                setReferralMessage(e.target.value)
+                              }
                               rows={4}
                             />
-                            <Button onClick={handleReferralRequest} className="w-full">
+                            <Button
+                              onClick={handleReferralRequest}
+                              className="w-full"
+                            >
                               Send Request
                             </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
                     )}
+
+                    {/* Mentorship */}
                     {alumni.isAvailableForMentorship && (
                       <Dialog>
                         <DialogTrigger asChild>
@@ -165,36 +277,31 @@ const AlumniProfile: React.FC = () => {
                         </DialogTrigger>
                         <DialogContent>
                           <DialogHeader>
-                            <DialogTitle>Request Mentorship from {alumni.name}</DialogTitle>
+                            <DialogTitle>
+                              Request Mentorship from {alumni.name}
+                            </DialogTitle>
                             <DialogDescription>
-                              Connect with {alumni.name} for career guidance and mentorship
+                              Connect with {alumni.name} for career guidance
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
                             <Textarea
-                              placeholder="Introduce yourself and explain what you hope to learn..."
+                              placeholder="Introduce yourself..."
                               value={mentorshipMessage}
-                              onChange={(e) => setMentorshipMessage(e.target.value)}
+                              onChange={(e) =>
+                                setMentorshipMessage(e.target.value)
+                              }
                               rows={4}
                             />
-                            <Button onClick={handleMentorshipRequest} className="w-full">
+                            <Button
+                              onClick={handleMentorshipRequest}
+                              className="w-full"
+                            >
                               Send Request
                             </Button>
                           </div>
                         </DialogContent>
                       </Dialog>
-                    )}
-                    <Button variant="outline" className="gap-2">
-                      <Mail className="h-4 w-4" />
-                      Send Message
-                    </Button>
-                    {alumni.linkedIn && (
-                      <Button variant="outline" className="gap-2" asChild>
-                        <a href={alumni.linkedIn} target="_blank" rel="noopener noreferrer">
-                          <Linkedin className="h-4 w-4" />
-                          LinkedIn
-                        </a>
-                      </Button>
                     )}
                   </div>
                 )}
@@ -212,6 +319,7 @@ const AlumniProfile: React.FC = () => {
             <TabsTrigger value="achievements">Achievements</TabsTrigger>
           </TabsList>
 
+          {/* About */}
           <TabsContent value="about" className="space-y-4">
             <Card>
               <CardHeader>
@@ -220,7 +328,11 @@ const AlumniProfile: React.FC = () => {
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {alumni.skills.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="px-3 py-1">
+                    <Badge
+                      key={skill}
+                      variant="secondary"
+                      className="px-3 py-1"
+                    >
                       {skill}
                     </Badge>
                   ))}
@@ -240,7 +352,12 @@ const AlumniProfile: React.FC = () => {
                 {alumni.linkedIn && (
                   <div className="flex items-center gap-2">
                     <Linkedin className="h-4 w-4 text-muted-foreground" />
-                    <a href={alumni.linkedIn} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    <a
+                      href={alumni.linkedIn}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
                       LinkedIn Profile
                     </a>
                   </div>
@@ -249,8 +366,9 @@ const AlumniProfile: React.FC = () => {
             </Card>
           </TabsContent>
 
+          {/* Experience */}
           <TabsContent value="experience" className="space-y-4">
-            {alumni.experience.map((exp, index) => (
+            {alumni.experience?.map((exp, index) => (
               <Card key={index}>
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -262,14 +380,17 @@ const AlumniProfile: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{exp.description}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {exp.description}
+                  </p>
                 </CardContent>
               </Card>
             ))}
           </TabsContent>
 
+          {/* Projects */}
           <TabsContent value="projects" className="space-y-4">
-            {alumni.projects.map((project, index) => (
+            {alumni.projects?.map((project, index) => (
               <Card key={index}>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -278,7 +399,9 @@ const AlumniProfile: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-3">{project.description}</p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {project.description}
+                  </p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {project.technologies.map((tech) => (
                       <Badge key={tech} variant="outline" className="text-xs">
@@ -287,7 +410,11 @@ const AlumniProfile: React.FC = () => {
                     ))}
                   </div>
                   {project.link && (
-                    <a href={project.link} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={project.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <Button variant="link" size="sm" className="px-0">
                         View Project →
                       </Button>
@@ -298,16 +425,21 @@ const AlumniProfile: React.FC = () => {
             ))}
           </TabsContent>
 
+          {/* Achievements */}
           <TabsContent value="achievements" className="space-y-4">
-            {alumni.achievements.map((achievement, index) => (
+            {alumni.achievements?.map((ach, index) => (
               <Card key={index}>
                 <CardHeader>
                   <div className="flex items-start gap-3">
                     <Award className="h-5 w-5 text-accent mt-1" />
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{achievement.title}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">{achievement.description}</p>
-                      <Badge variant="outline" className="mt-2">{achievement.year}</Badge>
+                      <CardTitle className="text-lg">{ach.title}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {ach.description}
+                      </p>
+                      <Badge variant="outline" className="mt-2">
+                        {ach.year}
+                      </Badge>
                     </div>
                   </div>
                 </CardHeader>

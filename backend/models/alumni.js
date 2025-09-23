@@ -24,6 +24,13 @@ const ProjectSchema = new Schema({
   link: { type: String },
 });
 
+// Request sub-schema (for referrals & mentorship)
+const RequestSchema = new Schema({
+  message: { type: String, required: true },
+  requestedBy: { type: Schema.Types.ObjectId, ref: "User" }, // optional, if you have a user model
+  createdAt: { type: Date, default: Date.now },
+});
+
 // Alumni schema
 const AlumniSchema = new Schema({
   name: { type: String, required: true },
@@ -41,6 +48,8 @@ const AlumniSchema = new Schema({
   projects: { type: [ProjectSchema], default: [] },
   isAvailableForMentorship: { type: Boolean, default: false },
   isAvailableForReferral: { type: Boolean, default: false },
+  referralRequests: { type: [RequestSchema], default: [] },
+  mentorshipRequests: { type: [RequestSchema], default: [] },
 });
 
 module.exports =

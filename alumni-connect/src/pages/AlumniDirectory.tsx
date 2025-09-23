@@ -36,13 +36,23 @@ const AlumniDirectory: React.FC = () => {
 
         if (!res.ok) throw new Error("Failed to fetch alumni data");
         const data = await res.json();
-        setAlumniData(data.alumni);
+
+        // Map _id to id for frontend consistency
+        const formatted = data.alumni.map((alum: any) => ({
+          ...alum,
+          id: alum._id,
+        }));
+
+        console.log("Fetched Alumni Data:", formatted); // <-- Add this line to view data
+
+        setAlumniData(formatted);
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
+
     fetchAlumni();
   }, []);
 
