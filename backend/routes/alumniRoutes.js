@@ -3,12 +3,14 @@ const router = express.Router();
 const {
   getAllAlumni,
   getFilteredAlumni,
+  loginUser,
 } = require("../Controllers/alumniControllers");
 
 const Alumni = require("../models/alumni");
 
 // Route to get all alumni
 router.get("/", getFilteredAlumni); // You can use query params for filtering
+router.post("/login", loginUser);
 router.get("/:id", async (req, res) => {
   try {
     const alumni = await Alumni.findById(req.params.id);

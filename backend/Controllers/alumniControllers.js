@@ -1,5 +1,6 @@
 const Alumni = require("../models/alumni");
-
+const Student = require("../models/student");
+const Admin = require("../models/admin");
 // Get all alumni
 const getAllAlumni = async (req, res) => {
   try {
@@ -11,6 +12,41 @@ const getAllAlumni = async (req, res) => {
   }
 };
 
+// Login
+const loginUser = async (req, res) => {
+  const { email, password, role } = req.body;
+
+  if (!email || !password || !role) {
+    return res
+      .status(400)
+      .json({ message: "Email, password, and role are required" });
+  }
+
+  try {
+    let user = null;
+
+    if (role === "student") user = await Student.findOne({ email, password });
+    else if (role === "alumni")
+      user = await Alumni.findOne({ email, password });
+    else if (role === "admin") user = await Admin.findOne({ email, password });
+    else return res.status(400).json({ message: "Invalid role" });
+
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+
+    return res.status(200).json({
+      message: "Login successful",
+      role,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 // Get filtered alumni
 const getFilteredAlumni = async (req, res) => {
   try {
@@ -46,4 +82,5 @@ const getFilteredAlumni = async (req, res) => {
 module.exports = {
   getAllAlumni,
   getFilteredAlumni,
+  loginUser,
 };

@@ -10,6 +10,7 @@ import AlumniDirectory from "./pages/AlumniDirectory";
 import AlumniProfile from "./pages/AlumniProfile";
 import Events from "./pages/Events";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/login";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
             <Header />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/alumni" element={<AlumniDirectory />} />
               <Route path="/alumni/:id" element={<AlumniProfile />} />
               <Route path="/events" element={<Events />} />
