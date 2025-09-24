@@ -33,7 +33,7 @@ const Dashboard: React.FC = () => {
 
       try {
         const res = await fetch(
-          "http://localhost:5000/api/alumni/me/requests",
+          "http://localhost:3000/api/alumni/me/requests",
           { credentials: "include" }
         );
         if (!res.ok) throw new Error("Failed to fetch requests");

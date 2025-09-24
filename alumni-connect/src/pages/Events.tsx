@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import EventCard from '@/components/EventCard';
-import { mockEvents } from '@/data/mockData';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from "react";
+import EventCard from "@/components/EventCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -10,41 +9,86 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Calendar, Plus, Filter } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "@/components/ui/select";
+import { Calendar, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Event } from "@/types";
+
+interface BackendEvent {
+  _id: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  type: string;
+  imagets?: string;
+}
 
 const Events: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [eventType, setEventType] = useState('all');
+  const [eventType, setEventType] = useState("all");
+  const [events, setEvents] = useState<Event[]>([]);
   const [newEvent, setNewEvent] = useState({
-    title: '',
-    description: '',
-    date: '',
-    time: '',
-    location: '',
-    type: 'meetup' as const,
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    location: "",
+    type: "meetup" as const,
   });
 
+  // Fetch events from backend
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/events");
+      const data: BackendEvent[] = await res.json();
+
+      const formattedEvents: Event[] = data.map((event) => ({
+        id: event._id,
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        type: ["workshop", "meetup", "webinar", "conference"].includes(
+          event.type
+        )
+          ? (event.type as "workshop" | "meetup" | "webinar" | "conference")
+          : "meetup", // fallback
+        featuredAlumni: [],
+        image: event.imagets || "/default-event.jpg",
+      }));
+
+      setEvents(formattedEvents);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
   const handleEventRegister = () => {
-    const isSuccess = Math.random() > 0.2; // 80% success rate for demo
-    
+    const isSuccess = Math.random() > 0.2;
     if (isSuccess) {
       toast({
         title: "Registration Successful!",
-        description: "You've been registered for the event. Check your email for confirmation.",
+        description:
+          "You've been registered for the event. Check your email for confirmation.",
       });
     } else {
       toast({
@@ -55,31 +99,51 @@ const Events: React.FC = () => {
     }
   };
 
-  const handleAddEvent = () => {
-    toast({
-      title: "Event Created!",
-      description: "Your event has been successfully added to the calendar.",
-    });
-    setNewEvent({
-      title: '',
-      description: '',
-      date: '',
-      time: '',
-      location: '',
-      type: 'meetup',
-    });
+  const handleAddEvent = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newEvent, createdBy: user?.id }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create event");
+
+      toast({
+        title: "Event Created!",
+        description: "Your event has been successfully added to the calendar.",
+      });
+
+      setNewEvent({
+        title: "",
+        description: "",
+        date: "",
+        time: "",
+        location: "",
+        type: "meetup",
+      });
+
+      fetchEvents();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
 
-  const filteredEvents = eventType === 'all' 
-    ? mockEvents 
-    : mockEvents.filter(event => event.type === eventType);
+  const filteredEvents =
+    eventType === "all"
+      ? events
+      : events.filter((event) => event.type === eventType);
 
-  const upcomingEvents = filteredEvents.filter(event => 
-    new Date(event.date) >= new Date()
+  const upcomingEvents = filteredEvents.filter(
+    (event) => new Date(event.date) >= new Date()
   );
 
-  const pastEvents = filteredEvents.filter(event => 
-    new Date(event.date) < new Date()
+  const pastEvents = filteredEvents.filter(
+    (event) => new Date(event.date) < new Date()
   );
 
   return (
@@ -96,8 +160,8 @@ const Events: React.FC = () => {
               Connect, learn, and grow with our alumni community events
             </p>
           </div>
-          
-          {user?.role === 'admin' && (
+
+          {user?.role === "admin" && (
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="gap-2">
@@ -118,7 +182,9 @@ const Events: React.FC = () => {
                     <Input
                       id="title"
                       value={newEvent.title}
-                      onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, title: e.target.value })
+                      }
                       placeholder="Enter event title"
                     />
                   </div>
@@ -127,7 +193,12 @@ const Events: React.FC = () => {
                     <Textarea
                       id="description"
                       value={newEvent.description}
-                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                      onChange={(e) =>
+                        setNewEvent({
+                          ...newEvent,
+                          description: e.target.value,
+                        })
+                      }
                       placeholder="Describe the event"
                       rows={3}
                     />
@@ -139,7 +210,9 @@ const Events: React.FC = () => {
                         id="date"
                         type="date"
                         value={newEvent.date}
-                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                        onChange={(e) =>
+                          setNewEvent({ ...newEvent, date: e.target.value })
+                        }
                       />
                     </div>
                     <div>
@@ -148,7 +221,9 @@ const Events: React.FC = () => {
                         id="time"
                         type="time"
                         value={newEvent.time}
-                        onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                        onChange={(e) =>
+                          setNewEvent({ ...newEvent, time: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -157,13 +232,20 @@ const Events: React.FC = () => {
                     <Input
                       id="location"
                       value={newEvent.location}
-                      onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+                      onChange={(e) =>
+                        setNewEvent({ ...newEvent, location: e.target.value })
+                      }
                       placeholder="Event location or virtual link"
                     />
                   </div>
                   <div>
                     <Label htmlFor="type">Event Type</Label>
-                    <Select value={newEvent.type} onValueChange={(value: any) => setNewEvent({ ...newEvent, type: value })}>
+                    <Select
+                      value={newEvent.type}
+                      onValueChange={(value: any) =>
+                        setNewEvent({ ...newEvent, type: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -186,41 +268,19 @@ const Events: React.FC = () => {
 
         {/* Event Type Filter */}
         <div className="mb-6 flex gap-2 flex-wrap">
-          <Button
-            variant={eventType === 'all' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setEventType('all')}
-          >
-            All Events
-          </Button>
-          <Button
-            variant={eventType === 'workshop' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setEventType('workshop')}
-          >
-            Workshops
-          </Button>
-          <Button
-            variant={eventType === 'meetup' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setEventType('meetup')}
-          >
-            Meetups
-          </Button>
-          <Button
-            variant={eventType === 'webinar' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setEventType('webinar')}
-          >
-            Webinars
-          </Button>
-          <Button
-            variant={eventType === 'conference' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setEventType('conference')}
-          >
-            Conferences
-          </Button>
+          {["all", "workshop", "meetup", "webinar", "conference"].map(
+            (type) => (
+              <Button
+                key={type}
+                variant={eventType === type ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEventType(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}{" "}
+                {type !== "all" ? "Events" : ""}
+              </Button>
+            )
+          )}
         </div>
 
         {/* Events Tabs */}

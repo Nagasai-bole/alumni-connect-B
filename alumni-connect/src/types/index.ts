@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'alumni' | 'admin';
+export type UserRole = "student" | "alumni" | "admin";
 
 export interface User {
   id: string;
@@ -54,9 +54,9 @@ export interface Event {
   date: string;
   time: string;
   location: string;
-  type: 'workshop' | 'meetup' | 'webinar' | 'conference';
+  type: "workshop" | "meetup" | "webinar" | "conference";
   featuredAlumni: string[];
-  image: string;
+  image?: string; // optional now
   registrationLink?: string;
 }
 
@@ -67,6 +67,6 @@ export interface ReferralRequest {
   company: string;
   position: string;
   message: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: "pending" | "accepted" | "rejected";
   createdAt: string;
 }
