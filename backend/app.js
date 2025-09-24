@@ -16,6 +16,7 @@ const ejsMate = require("ejs-mate");
 // const ExpressError = require("./utils/ExpressError");
 
 const alumniRoutes = require("./routes/alumniRoutes");
+const eventRoutes = require("./routes/EventRoutes");
 
 const app = express();
 
@@ -90,6 +91,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/alumni", alumniRoutes);
+
+app.use("/api/events", eventRoutes);
 
 // Error handling
 // app.all("*", (req, res, next) => {

@@ -26,7 +26,7 @@ router.get("/:id", async (req, res) => {
 // GET requests for logged-in alumni
 router.get("/me/requests", async (req, res) => {
   try {
-    const alumniId = req.user.id; // assuming you set req.user via auth middleware
+    const alumniId = "68d2e67c29a918c9bc2929f1";
     const alumni = await Alumni.findById(alumniId);
     if (!alumni) return res.status(404).json({ message: "Alumni not found" });
 
